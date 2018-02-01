@@ -1,0 +1,335 @@
+const targetServer = 'SMTN-sql14';
+const targetDatabase = 'TestBed';
+
+const eo = {}; //  http://web.archive.org/web/20161108071447/http://blog.osteele.com/posts/2007/12/cheap-monads/
+//||eo).guid
+const sql = require('mssql/msnodesqlv8');
+const tt = require('./tableTemplates.js')
+const config = {
+	//user: 'NodeAPICaller',
+	//password:'password!',
+	server: targetServer,
+	database: targetDatabase,
+	options:{trustedConnection: true}
+	
+}
+
+
+const pool = new sql.ConnectionPool(config);
+
+
+exports.testConnection = function(){
+
+	pool.connect(err =>{
+		if(err){
+			console.log(err)
+		}
+		else{
+			console.log('connection successful')
+		}
+	})
+}
+
+exports.mergeToDB = function(orderSet){ // TODO add storeID columns to order, check, payment, selection
+
+	const orders = tt.createOrdersTable('#orders');
+
+	const checks = tt.createChecksTable();
+
+	const selections = tt.createSelectionsTable();
+
+	const payments = tt.createPaymentsTable();
+
+	const refunds = tt.createRefundsTable();
+
+	const appliedTaxes = tt.createATsTable();
+
+	const voidInfos = tt.createVoidInfoTable();
+
+	const appliedServiceCharges = tt.createASCsTable();
+
+	const appliedDiscounts = tt.createAppliedDiscountsTable();
+
+	const deliveryInfos = tt.createDeliveryInfoTable();
+
+	const customers = tt.createCustomerTable();
+
+	const appliedLoyaltyInfos = tt.createAppliedLoyaltyInfoTable();
+
+	const loyaltyDetails = tt.createLoyaltyDetailsTable();
+	console.log('tables declared')
+	for (let iorder in orderSet)
+	{
+		let order = orderSet[iorder]
+		//console.log(order.guid);
+		//populate orders table
+		orders.rows.add(order.guid, order.openedDate, order.modifiedDate, order.promisedDate, ((order||eo).diningOption||eo).guid, ((order||eo).table||eo).guid, ((order||eo).serviceArea||eo).guid,
+		 ((order||eo).restaurantService||eo).guid, ((order||eo).revenueCenter||eo).guid, order.source, order.duration, order.estimatedFulfillmentDate, order.numberOfGuests, order.voided, order.voidDate,
+		  order.voidBusinessdate, order.paidDate, order.closedDate, order.deletedDate, order.deleted, order.businessDate, ((order||eo).server||eo).guid)
+
+		if(order.deliveryInfo)
+		{
+			let dInfo = order.deliveryInfo;
+			deliveryInfos.rows.add(order.guid, dInfo.address1, dInfo.address2, dInfo.city, dInfo.state, dInfo.zipCode, dInfo.latitude, dInfo.longitude, dInfo.deliveredDate, dInfo.dispatchedDate, ((dInfo||eo).deliveryEmployee||eo).guid)
+		}
+
+		for (let icheck in order['checks'])
+		{
+			//populate checks
+			let check = order['checks'][icheck]
+			if (check.customer){
+				let cust = check.customer;
+				customers.rows.add(check.guid, cust.guid, cust.firstName, cust.lastName, cust.phone, cust.email)
+			}
+			if (check.appliedLoyaltyInfo)
+			{
+				let aLI = check.appliedLoyaltyInfo;
+				appliedLoyaltyInfos.rows.add(aLI.guid, check.guid, aLI.loyaltyIdentifier, aLI.vendor, aLI.accrualFamilyGuid, aLI.accrualText)
+			}
+
+			checks.rows.add(check.guid, order.guid, check.openedDate, check.modifiedDate, check.deletedDate, check.deleted, check.taxExempt, check.displayNumber, check.amount, check.taxAmount, check.totalAmount, check.tabName,
+				check.paymentStatus, check.voided, check.voidDate, check.voidBusinessdate, check.paidDate)
+
+			for(let ipayment in check['payments'])
+			{
+				let payment = check['payments'][ipayment]
+				if (payment.refund)
+				{
+					let refund = payment.refund;
+					refunds.rows.add(payment.guid, refund.refundAmount, refund.tipRefundAmount, refund.refundDate, refund.refundBusinessDate)
+				}
+				if (payment.voidInfo)
+				{
+					let voidinf = payment.voidInfo;
+					voidInfos.rows.add(payment.guid, ((voidinf||eo).voidUser||eo).guid, ((voidinf||eo).voidApprover||eo).guid, voidinf.voidDate, voidinf.voidBusinessdate, ((voidinf||eo).voidReason||eo).guid )
+				}
+
+				payments.rows.add(payment.guid, check.guid, payment.paidDate, payment.paidBusinessDate, payment.type, payment.cardEntryMode, payment.amount, payment.tipAmount, payment.amountTendered, payment.cardType, payment.last4Digits, 
+					payment.originalProcessingFee, ((payment||eo).cashDrawer||eo).guid, payment.refundStatus, ((payment||eo).houseAccount||eo).guid, ((payment||eo).otherPayment||eo).guid)
+			}
+			for(let iaD in check['appliedDiscounts'])
+			{
+				let aD = check['appliedDiscounts'][iaD]
+				appliedDiscounts.rows.add(aD.guid, check.guid, aD.name, aD.discountAmount, ((aD||eo).discount||eo).guid, ((aD||eo).approver||eo).guid, aD.processingState, JSON.stringify(aD.comboItems), aD.appliedPromoCode)
+				if(aD.loyaltyDetails)
+				{
+					let lD = aD.loyaltyDetails;
+					loyaltyDetails.rows.add(aD.guid, lD.vendor, lD.referenceId)
+				}
+			}
+			for(let iaSC in check['appliedServiceCharges'])
+			{
+				let aSC = check['appliedServiceCharges'][iaSC]
+				appliedServiceCharges.rows.add(aSC.guid, check.guid, aSC.chargeAmount, ((aSC||eo).serviceCharge||eo).guid, aSC.chargeType, aSC.name, aSC.delivery, aSC.gratuity, aSC.taxable)
+				for(let iaT in aSC['appliedTaxes'])
+				{
+					let aT = aSC['appliedTaxes'][iaT]
+					appliedTaxes.rows.add(aSC.guid, aT.entityType, ((aT||eo).taxRate||eo).guid, aT.rate, aT.taxAmount, aT.type)
+				}
+			}
+			for(let iselection in check['selections'])//field 3 is whether the selection is a modifier or not, for our internal use
+			{
+				let selection = check['selections'][iselection]
+				selections.rows.add(selection.guid, check.guid, false, ((selection||eo).item||eo).guid, ((selection||eo).itemGroup||eo).guid, ((selection||eo).optionGroup||eo).guid, ((selection||eo).preModifier||eo).guid, selection.quantity, selection.selectionType,
+				 ((selection||eo).salesCategory||eo).guid, selection.deferred, selection.preDiscountPrice, selection.price, selection.tax, selection.voided, selection.voidDate, selection.voidBusinessDate, ((selection||eo).voidReason||eo).guid, selection.displayName, selection.createdDate, selection.modifiedDate,
+				 selection.fulfillmentStatus)
+				
+				for(let iaD in selection['appliedDiscounts'])
+				{
+					let aD = selection['appliedDiscounts'][iaD]
+					appliedDiscounts.rows.add(aD.guid, selection.guid, aD.name, aD.discountAmount, ((aD||eo).discount||eo).guid, ((aD||eo).approver||eo).guid, aD.processingState, JSON.stringify(aD.comboItems), aD.appliedPromoCode)
+					if(aD.loyaltyDetails)
+					{
+						let lD = aD.loyaltyDetails;
+						loyaltyDetails.rows.add(aD.guid, lD.vendor, lD.referenceId)
+					}
+				}
+				for(let iaT in selection['appliedTaxes'])
+				{
+					let aT = selection['appliedTaxes'][iaT]
+					appliedTaxes.rows.add(selection.guid, aT.entityType, ((aT||eo).taxRate||eo).guid, aT.rate, aT.taxAmount, aT.type)
+				}
+				for(let imodifier in selection['modifiers']) //modifiers are selections
+				{
+					let modifier = selection['modifiers'][imodifier]
+					selections.rows.add(modifier.guid, selection.guid, true, ((modifier||eo).item||eo).guid, ((modifier||eo).itemGroup||eo).guid, ((modifier||eo).optionGroup||eo).guid, ((modifier||eo).preModifier||eo).guid, modifier.quantity, modifier.selectionType,
+					 ((modifier||eo).salesCategory||eo).guid, modifier.deferred, modifier.preDiscountPrice, modifier.price, modifier.tax, modifier.voided, modifier.voidDate, modifier.voidBusinessDate, ((modifier||eo).voidReason||eo).guid, modifier.displayName, modifier.createdDate, modifier.modifiedDate,
+					 modifier.fulfillmentStatus)
+					for(let iaD in modifier['appliedDiscounts'])
+					{
+						let aD = modifier['appliedDiscounts'][iaD]
+						appliedDiscounts.rows.add(aD.guid, modifier.guid, aD.name, aD.discountAmount, ((aD||eo).discount||eo).guid, ((aD||eo).approver||eo).guid, aD.processingState, JSON.stringify(aD.comboItems), aD.appliedPromoCode)
+						if(aD.loyaltyDetails)
+						{
+							let lD = aD.loyaltyDetails;
+							loyaltyDetails.rows.add(aD.guid, lD.vendor, lD.referenceId)
+						}
+					}
+					for(let iaT in modifier['appliedTaxes'])
+					{
+						let aT = modifier['appliedTaxes'][iaT]
+						appliedTaxes.rows.add(modifier.guid, aT.entityType, ((aT||eo).taxRate||eo).guid, aT.rate, aT.taxAmount, aT.type)
+					}
+				}
+			}
+		}
+	}
+	console.log('TVPs populated');
+	console.log(orders.rows[0])
+
+	// const testOrders = tt.createOrdersTable('[Orders]');
+	// testOrders.rows.add('testID', '2001-01-01 00:00:00.000', '2001-01-01 00:00:00.000',
+	// 	 '2001-01-01 00:00:00.000', 'testDO', 'testTable', 'testsa', 'testrs', 'testrc', 'testsrc', null,
+	// 	  '2001-01-01 00:00:00.000', 69, false,  '2001-01-01 00:00:00.000', 42069,  '2001-01-01 00:00:00.000', '2001-01-01 00:00:00.000',
+	// 	   '2001-01-01 00:00:00.000', false, 69420, 'serverman')
+	// //const testOrders2 = tt.createOrdersTable();
+	// //testOrders2.rows.add('test' + Date.now(),new Date(Date.now()).toISOString(),null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null)
+	 pool.connect(err =>{
+	 	if (err) {console.log('connection error ' +err)}
+		else {console.log('connection opened')}
+		//let queryText = 'INSERT INTO [TestBed].[toast].[tOrders] VALUES ('
+	let queryText = 'SELECT '
+		//for(let rownum in orders.rows)
+		let rownum = 0;
+		{
+			const request = new sql.Request(pool);
+			for(let colnum in orders.rows[rownum])
+			{
+				request.input(''+colnum, orders.rows[rownum][colnum])
+				queryText += '@' + colnum + ', '
+			}
+			console.log(queryText);
+			queryText = queryText.slice(0,-2)
+			queryText +=';'
+			console.log(queryText);
+			request.query(queryText, (e,r)=>{
+				if(e){console.log(e)}
+				else{console.log(r)}
+			})
+		}		
+})
+		// 	const qtest = new sql.Request(pool);
+		// 	qtest.query
+			// const bulktOrdersInsert = new sql.Request(pool)
+			// 	bulktOrdersInsert.bulk(testOrders, (e,r)=>{
+			// 		if(e){console.log(e)}
+			// 		else{
+			// 			console.log(r)
+			// 			transaction.commit((err)=>{})
+			// 		}
+			// 	})
+		//})
+		// const transaction = new sql.Transaction(pool);
+		// transaction.begin((err)=>
+		// {
+		// 	console.log('beginning transaction')
+		// 	let rb = false;
+		// 	transaction.on('rollback', aborted => 
+		// 	{
+		// 		rb = true;
+		// 		console.log('transaction aborted');
+		// 	})
+		// 	console.log(orders.rows[0])
+		// 	const bulktOrdersInsert = new sql.Request(transaction)
+		// 	bulktOrdersInsert.bulk(testOrders, (e,r)=>{
+		// 		if(e){console.log(e)}
+		// 		else{
+		// 			console.log(r)
+		// 			transaction.commit((err)=>{})
+		// 		}
+		// 	})
+			//const selectTest = new sql.Request(transaction)
+			// selectTest.query('select * from SMTN_LitmosEmployeeExport', (err, res) =>{
+			// 	console.log('selecting')
+			// 	if (err)
+			// 	{
+			// 		console.log(err)
+			// 	}
+			// 	else 
+			// 	{
+			// 		console.log(res)
+			// 		transaction.commit((err)=>{})
+			// 	}
+			// })
+
+			// console.log(testOrders2.rows[0])
+			// const mergeOrders = new sql.Request(transaction)
+			// console.log('request instantiated')
+			// // mergeOrders.input('orderinput', orders);
+			// mergeOrders.input('orderinput', testOrders2);
+			// console.log('input set')
+			// mergeOrders.execute('[toast].[MergeOrders]', (err, result) => {
+			// 	console.log('executed')
+			// 	console.log('result')
+			// 	if(err){
+			// 		if(!rb){
+			// 			transaction.rollback(rberr=>{
+			// 				if(rberr) {console.log(rberr);}
+			// 			})
+			// 		}
+			// 		console.log('execution error')
+			// 		console.log(err);
+			// 	}
+			// 	else{
+			// 		console.log('success')
+			// 		transaction.commit((err) =>{ //for last request
+			// 			if(err) console.log(err)
+			// 		})
+			// 	}
+			// })
+
+		// 	const mergeChecks = new sql.Request(transaction)
+		// 	mergeOrders.query('query text here', (err, result) => {
+		// 		if(err){
+		// 			if(!rb){
+		// 				transaction.rollback(rberr=>{
+		// 					if(rberr) {console.log(rberr);}
+		// 				})
+		// 			}
+		// 			else console.log(err);
+		// 		}
+		// 		else{
+		// 			//transaction.commit((err) =>{ //for last request
+		// 			//	if(err) console.log(err)
+		// 			//})
+		// 		}
+		// 	})
+
+		// 	const mergePayments = new sql.Request(transaction)
+		// 	mergeOrders.query('query text here', (err, result) => {
+		// 		if(err){
+		// 			if(!rb){
+		// 				transaction.rollback(rberr=>{
+		// 					if(rberr) {console.log(rberr);}
+		// 				})
+		// 			}
+		// 			else console.log(err);
+		// 		}
+		// 		else{
+		// 			//transaction.commit((err) =>{ //for last request
+		// 			//	if(err) console.log(err)
+		// 			//})
+		// 		}
+		// 	})
+
+		// 	const mergeSelections = new sql.Request(transaction)
+		// 	mergeOrders.query('query text here', (err, result) => {
+		// 		if(err){
+		// 			if(!rb){
+		// 				transaction.rollback(rberr=>{
+		// 					if(rberr) {console.log(rberr);}
+		// 				})
+		// 			}
+		// 			else console.log(err);
+		// 		}
+		// 		else{
+		// 			//transaction.commit((err) =>{ //for last request
+		// 			//	if(err) console.log(err)
+		// 			//})
+		// 		}
+		// 	})
+		
+//	})
+}
+
+

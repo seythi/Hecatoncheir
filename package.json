@@ -1,0 +1,20 @@
+{
+  "name": "nodeapicaller",
+  "version": "1.0.0",
+  "description": "",
+  "main": "caller.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.5.1",
+    "bunyan": "^1.8.12",
+    "follow-redirects": "^1.2.5",
+    "msnodesqlv8": "^0.4.6",
+    "mssql": "^4.1.0",
+    "node-windows": "^0.1.14",
+    "request": "^2.83.0"
+  }
+}
