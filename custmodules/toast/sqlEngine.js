@@ -22,7 +22,7 @@ var log = bunyan.createLogger({
 
 
 const targetServer = 'SMTN-sql14';
-const targetDatabase = 'TestBed';
+const targetDatabase = 'ETL';
 
 
 
@@ -30,11 +30,11 @@ exports.getGUIDs = function(){
 	return new promise(resolve=>{
 	console.log('here');
 	const conOPT = {
-	userName: 'Hecatonchier',
+	userName: 'Hecatoncheir',
 	password:'Password1',
 	server: targetServer,
 	
-	options:{database: 'SMTN', trustedConnection: true, rowCollectionOnRequestCompletion: true}
+	options:{database: targetDatabase, trustedConnection: true, rowCollectionOnRequestCompletion: true}
 	}
 	let conn = new sql.Connection(conOPT)
 	conn.on('connect',err=>{
@@ -46,7 +46,7 @@ exports.getGUIDs = function(){
 		}
 		else{
 			console.log('connected');
-			var req = new sql.Request('select ToastGUID from dbo.SpEngine_Stores WHERE ToastGUID IS NOT NULL',(e,rc,rs)=>{
+			var req = new sql.Request('select ToastGUID from __UTIL.store_metadata WHERE ToastGUID IS NOT NULL',(e,rc,rs)=>{
 				let guids = [];
 				for(let r in rs)
 				{
@@ -63,7 +63,7 @@ exports.getGUIDs = function(){
 
 exports.bulkInsert = function(storeSet){
 	const conOPT = {
-	userName: 'Hecatonchier',
+	userName: 'Hecatoncheir',
 	password:'Password1',
 	server: targetServer,
 	
@@ -84,80 +84,80 @@ exports.bulkInsert = function(storeSet){
 		else
 		{
 			console.log('connection made')
-			var Orders = conn.newBulkLoad('toast.tOrders', (err, rc) => //every bulk load is called in a resolution chain starting at orders
-				{ if(err){log.error(err, "failed to write to tOrders")} //this is unavoidable as requests must be made in series
+			var Orders = conn.newBulkLoad('toast.Orders_', (err, rc) => //every bulk load is called in a resolution chain starting at orders
+				{ if(err){log.error(err, "failed to write to Orders_")} //this is unavoidable as requests must be made in series
 				else{console.log('inserted ' + rc + ' rows into Orders')}
 					conn.execBulkLoad(Checks);
 				})
 			tcol.createOrdersTable(Orders)
-			var Checks = conn.newBulkLoad('toast.tChecks', (err, rc) =>
-				{ if(err){log.error(err, "failed to write to tChecks")}
+			var Checks = conn.newBulkLoad('toast.Checks_', (err, rc) =>
+				{ if(err){log.error(err, "failed to write to Checks_")}
 				else{console.log('inserted ' + rc + ' rows into Checks')}
 					conn.execBulkLoad(Selections);
 				})
 			tcol.createChecksTable(Checks)
-			var Selections = conn.newBulkLoad('toast.tSelections', (err, rc) =>
-				{ if(err){log.error(err, "failed to write to tSelections")}
+			var Selections = conn.newBulkLoad('toast.Selections_', (err, rc) =>
+				{ if(err){log.error(err, "failed to write to Selections_")}
 				else{console.log('inserted ' + rc + ' rows into Selections')}
 					conn.execBulkLoad(Payments)
 				})
 			tcol.createSelectionsTable(Selections)
-			var Payments = conn.newBulkLoad('toast.tPayments', (err, rc) =>
-				{ if(err){log.error(err, "failed to write to tPayments")}
+			var Payments = conn.newBulkLoad('toast.Payments_', (err, rc) =>
+				{ if(err){log.error(err, "failed to write to Payments_")}
 				else{console.log('inserted ' + rc + ' rows into Payments')}
 					conn.execBulkLoad(Refunds)
 				})
 			tcol.createPaymentsTable(Payments)
-			var Refunds = conn.newBulkLoad('toast.tRefunds', (err, rc) =>
-				{ if(err){log.error(err, "failed to write to tRefunds")}
+			var Refunds = conn.newBulkLoad('toast.Refunds_', (err, rc) =>
+				{ if(err){log.error(err, "failed to write to Refunds_")}
 				else{console.log('inserted ' + rc + ' rows into Refunds')}
 					conn.execBulkLoad(AppliedTaxes)
 				})
 			tcol.createRefundsTable(Refunds)
-			var AppliedTaxes = conn.newBulkLoad('toast.tAppliedTaxes', (err, rc) =>
-				{ if(err){log.error(err, "failed to write to tAppliedTaxes")}
+			var AppliedTaxes = conn.newBulkLoad('toast.AppliedTaxes_', (err, rc) =>
+				{ if(err){log.error(err, "failed to write to AppliedTaxes_")}
 				else{console.log('inserted ' + rc + ' rows into AppliedTaxes')}
 					conn.execBulkLoad(VoidInfos)
 				})
 			tcol.createAppliedTaxesTable(AppliedTaxes)
-			var VoidInfos = conn.newBulkLoad('toast.tVoidInfos', (err, rc) =>
-				{ if(err){log.error(err, "failed to write to tVoidInfos")}
+			var VoidInfos = conn.newBulkLoad('toast.VoidInfos_', (err, rc) =>
+				{ if(err){log.error(err, "failed to write to VoidInfos_")}
 				else{console.log('inserted ' + rc + ' rows into VoidInfos')}
 					conn.execBulkLoad(AppliedServiceCharges)
 				})
 			tcol.createVoidInfosTable(VoidInfos)
-			var AppliedServiceCharges = conn.newBulkLoad('toast.tAppliedServiceCharges', (err, rc) =>
-				{ if(err){log.error(err, "failed to write to tAppliedServiceCharges")}
+			var AppliedServiceCharges = conn.newBulkLoad('toast.AppliedServiceCharges_', (err, rc) =>
+				{ if(err){log.error(err, "failed to write to AppliedServiceCharges_")}
 				else{console.log('inserted ' + rc + ' rows into AppliedServiceCharges')}
 					conn.execBulkLoad(AppliedDiscounts)
 				})
 			tcol.createAppliedServiceChargesTable(AppliedServiceCharges)
-			var AppliedDiscounts = conn.newBulkLoad('toast.tAppliedDiscounts', (err, rc) =>
-				{ if(err){log.error(err, "failed to write to tAppliedDiscounts")}
+			var AppliedDiscounts = conn.newBulkLoad('toast.AppliedDiscounts_', (err, rc) =>
+				{ if(err){log.error(err, "failed to write to AppliedDiscounts_")}
 				else{console.log('inserted ' + rc + ' rows into AppliedDiscounts')}
 					conn.execBulkLoad(DeliveryInfos)
 				})
 			tcol.createAppliedDiscountsTable(AppliedDiscounts)
-			var DeliveryInfos = conn.newBulkLoad('toast.tDeliveryInfos', (err, rc) =>
-				{ if(err){log.error(err, "failed to write to tDeliveryInfos")}
+			var DeliveryInfos = conn.newBulkLoad('toast.DeliveryInfos_', (err, rc) =>
+				{ if(err){log.error(err, "failed to write to DeliveryInfos_")}
 				else{console.log('inserted ' + rc + ' rows into DeliveryInfos')}
 					conn.execBulkLoad(Customers)
 				})
 			tcol.createDeliveryInfosTable(DeliveryInfos)
-			var Customers = conn.newBulkLoad('toast.tCustomers', (err, rc) =>
-				{ if(err){log.error(err, "failed to write to tCustomers")}
+			var Customers = conn.newBulkLoad('toast.Customers_', (err, rc) =>
+				{ if(err){log.error(err, "failed to write to Customers_")}
 				else{console.log('inserted ' + rc + ' rows into Customers')}
 					conn.execBulkLoad(AppliedLoyaltyInfos)
 				})
 			tcol.createCustomersTable(Customers)
-			var AppliedLoyaltyInfos = conn.newBulkLoad('toast.tAppliedLoyaltyInfos', (err, rc) =>
-				{ if(err){log.error(err, "failed to write to tAppliedLoyaltyInfos")}
+			var AppliedLoyaltyInfos = conn.newBulkLoad('toast.AppliedLoyaltyInfos_', (err, rc) =>
+				{ if(err){log.error(err, "failed to write to AppliedLoyaltyInfos_")}
 				else{console.log('inserted ' + rc + ' rows into AppliedLoyaltyInfos')}
 					conn.execBulkLoad(LoyaltyDetails)
 				})
 			tcol.createAppliedLoyaltyInfosTable(AppliedLoyaltyInfos)
-			var LoyaltyDetails = conn.newBulkLoad('toast.tAppliedLoyaltyDetails', (err, rc) =>
-				{ if(err){log.error(err, "failed to write to tAppliedLoyaltyDetails")}
+			var LoyaltyDetails = conn.newBulkLoad('toast.AppliedLoyaltyDetails_', (err, rc) =>
+				{ if(err){log.error(err, "failed to write to AppliedLoyaltyDetails_")}
 				else{console.log('inserted ' + rc + ' rows into LoyaltyDetails')}
 					conn.callProcedure(mergeData)
 				})

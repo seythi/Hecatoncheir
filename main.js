@@ -20,10 +20,6 @@ var waiting = false
 toast.initToken(); //either A: requests token from toast or B: gets token that is less than 15 minutes old from file
 process.env.recentMail = null; //future tool to limit frequency of error mailing
 var dayint = Date.now()/86400000;
-if(cf.adhocfencepost > Date.now()) //workaround to force long backloads when starting as service
-{
-	backload = 54;
-}
 
 /////////////////////END INIT//////////////////////////
 /////////////////ARGUMENT HANDLER//////////////////////
@@ -67,7 +63,7 @@ setInterval(() => {
 	// {
 	// 	util.regenerate()
 	// }
-	
+
 	toast.renewToken();
 	// if(backload == -1 && dayint < (Date.now()/86400000))
 	// {
