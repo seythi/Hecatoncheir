@@ -45,15 +45,21 @@ exports.getGUIDs = function(){
 			util.regenerate()
 		}
 		else{
-			console.log('connected');
+			log.info('connected to SQL');
 			var req = new sql.Request('select ToastGUID from __UTIL.store_metadata WHERE ToastGUID IS NOT NULL',(e,rc,rs)=>{
-				let guids = [];
-				for(let r in rs)
-				{
-					guids.push(rs[r][0].value)
+				if(e){
+					log.error(e, 'failed to fetch GUIDs')
 				}
-				console.log('resolving guids')
-				resolve(guids);
+				else
+				{
+					let guids = [];
+					for(let r in rs)
+					{
+						guids.push(rs[r][0].value)
+					}
+					console.log('resolving guids')
+					resolve(guids);
+				}
 			})
 			conn.execSql(req)
 		}
@@ -86,7 +92,7 @@ exports.bulkInsert = function(storeSet){
 			console.log('connection made')
 			var Orders = conn.newBulkLoad('toast.Orders_', (err, rc) => //every bulk load is called in a resolution chain starting at orders
 				{ if(err){log.error(err, "failed to write to Orders_")} //this is unavoidable as requests must be made in series
-				else{console.log('inserted ' + rc + ' rows into Orders')}
+				else{log.info('inserted ' + rc + ' rows into Orders')}
 					conn.execBulkLoad(Checks);
 				})
 			tcol.createOrdersTable(Orders)
@@ -176,13 +182,14 @@ exports.bulkInsert = function(storeSet){
 			 }
 			})
 			var mergeData2 = new sql.Request('toast.mergeAll', err=>{ //after writing data to the toast.t(...) staging tables, merge them to the production tables
+				conn.close();
 				if (err){
 					log.fatal(err, 'failed to execute mergeall the second time')
 					console.log('failed mergeAll, consult log file')
 					util.regenerate()
 				}
 				
-			 	conn.close();
+			 	//conn.close();
 			 
 			})
 

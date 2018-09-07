@@ -94,7 +94,7 @@ exports.poll = function(backload)
 		{
 			console.log('all POS polled')
 			//let ordersFlat = [].concat.apply([], ordersThick)
-			fs.writeFile(path.resolve(cf.rootD, 'jsonDumps/output' + backload + '.json'), JSON.stringify(ordersThick, null, 4), (err)=> {if (err) throw err})//write raw json for debugging
+			//fs.writeFile(path.resolve(cf.rootD, 'jsonDumps/output' + backload + '.json'), JSON.stringify(ordersThick, null, 4), (err)=> {if (err) throw err})//write raw json for debugging
 			console.log('inserting into DB')
 			var repl = new Map()
 			repl.set(/\+0000/, 'Z')
@@ -252,7 +252,6 @@ function getOrderList(backload, token, locationGUID) //gets array of order GUIDs
 				businessDate: '' + bd.getFullYear() + ('0' + (bd.getMonth() + 1)).slice(-2) + (('0' + (bd.getDate())).slice(-2)) //encodes desired date as YYYYMMDD
 
 			}
-			fs.appendFile(path.resolve('C:\\Integrations\\Hecatoncheir\\logs\\blOrderCt.json'), qobj.businessDate, (err)=> {if (err) throw err})
 		}
 		let qs = querystring.stringify(qobj) //URL encodes the dates for appending to the URL
 		//console.log(qs)
