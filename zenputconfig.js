@@ -1,0 +1,3 @@
+exports templateIDs = [
+'GUID here'
+]
